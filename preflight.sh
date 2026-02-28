@@ -7,6 +7,10 @@ fail() { echo "[FAIL] $*"; }
 
 FAILED=0
 
+has_dri_nodes() {
+  compgen -G "/dev/dri/renderD*" >/dev/null || compgen -G "/dev/dri/card*" >/dev/null
+}
+
 ensure_user_bus_env() {
   if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
     export XDG_RUNTIME_DIR="/run/user/$(id -u)"
@@ -75,7 +79,7 @@ else
 fi
 
 if [[ -d /dev/dri ]]; then
-  if compgen -G "/dev/dri/renderD*" >/dev/null || compgen -G "/dev/dri/card*" >/dev/null; then
+  if has_dri_nodes; then
     ok "/dev/dri has render/card device nodes"
   else
     warn "/dev/dri exists but has no render/card nodes (ROCm container will not start)"

@@ -12,6 +12,9 @@ The `quadlets/` directory contains rootless Podman Quadlets with a shared networ
 On the remote Linux host:
 
 ```bash
+chmod +x diag-gpu.sh
+./diag-gpu.sh
+
 chmod +x preflight.sh
 ./preflight.sh
 
@@ -97,7 +100,7 @@ journalctl --user -u ollama-rocm.service -f
 `quadlets/ollama-rocm.container` is configured equivalent to:
 
 - `docker run -d --device /dev/kfd --device /dev/dri -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:rocm`
-- Image: `docker.io/ollama/ollama:rocm` (with `Pull=always`)
+- Image: `docker.io/ollama/ollama:rocm`
 - Devices: `/dev/kfd` and `/dev/dri`
 - Volume: `ollama:/root/.ollama`
 - Port: `11434:11434`
@@ -200,6 +203,7 @@ sudo systemctl restart ollama-rocm.service
 ## Notes
 
 - `podman-mcp-server` is launched via `npx` inside a Node container because the upstream project is distributed as binary/npm package.
+- `podman-mcp-server.container` uses `Pull=missing` to avoid repeated Docker Hub pulls on every restart.
 - The Ollama unit mirrors your ROCm `docker run` flags.
 - If this host is not Linux with ROCm devices (`/dev/kfd`, `/dev/dri/renderD*`), `ollama` will fail to start.
 - Installers automatically replace the generic `/dev/dri` mapping with explicit detected nodes (for example `/dev/dri/renderD128`) to avoid Podman hosts that reject directory device mappings.

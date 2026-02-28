@@ -12,6 +12,10 @@ QUADLETS_DIR="${SCRIPT_DIR}/quadlets"
 TARGET_DIR="/etc/containers/systemd"
 OPEN_WEBUI_DATA_DIR="/root/.local/share/open-webui"
 
+has_dri_nodes() {
+  compgen -G "/dev/dri/renderD*" >/dev/null || compgen -G "/dev/dri/card*" >/dev/null
+}
+
 configure_ollama_dri_devices() {
   local ollama_quadlet="${TARGET_DIR}/ollama-rocm.container"
   local -a dri_nodes
@@ -91,7 +95,7 @@ fi
 if [[ ! -d /dev/dri ]]; then
   echo "Skipping ollama-rocm.service: /dev/dri is missing on this host."
   OLLAMA_READY=false
-elif ! compgen -G "/dev/dri/renderD*" >/dev/null && ! compgen -G "/dev/dri/card*" >/dev/null; then
+elif ! has_dri_nodes; then
   echo "Skipping ollama-rocm.service: /dev/dri has no render/card nodes on this host."
   OLLAMA_READY=false
 fi
