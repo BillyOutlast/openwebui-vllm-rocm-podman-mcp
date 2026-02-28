@@ -28,6 +28,44 @@ ensure_user_bus() {
 
 ensure_user_bus
 
+preflight_rootless_podman() {
+  if ! command -v podman >/dev/null 2>&1; then
+    echo "podman is not installed or not in PATH."
+    exit 1
+  fi
+
+  if ! podman unshare true >/dev/null 2>&1; then
+    local current_user
+    current_user="$(id -un)"
+
+    echo "Rootless Podman namespace setup is not working."
+    echo "Detected failure pattern: newuidmap/newgidmap (exit status 1)."
+    echo
+    echo "Checks:"
+    if grep -q "^${current_user}:" /etc/subuid 2>/dev/null; then
+      echo "  - /etc/subuid entry for ${current_user}: found"
+    else
+      echo "  - /etc/subuid entry for ${current_user}: MISSING"
+    fi
+    if grep -q "^${current_user}:" /etc/subgid 2>/dev/null; then
+      echo "  - /etc/subgid entry for ${current_user}: found"
+    else
+      echo "  - /etc/subgid entry for ${current_user}: MISSING"
+    fi
+    echo
+    echo "Ask an admin to run (Debian/Ubuntu):"
+    echo "  sudo apt-get update && sudo apt-get install -y uidmap"
+    echo "  grep '^${current_user}:' /etc/subuid || echo '${current_user}:100000:65536' | sudo tee -a /etc/subuid"
+    echo "  grep '^${current_user}:' /etc/subgid || echo '${current_user}:100000:65536' | sudo tee -a /etc/subgid"
+    echo "  sudo chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap"
+    echo
+    echo "Then fully log out and log back in, and rerun ./install.sh"
+    exit 1
+  fi
+}
+
+preflight_rootless_podman
+
 mkdir -p "${TARGET_DIR}"
 
 cp "${QUADLETS_DIR}"/*.network "${TARGET_DIR}/"
@@ -39,10 +77,13 @@ if [[ ! -f "${STACK_ENV}" ]]; then
 fi
 
 systemctl --user daemon-reload
-systemctl --user start ai-shared-network.service
-systemctl --user enable --now vllm-rocm.service
-systemctl --user enable --now open-webui.service
-systemctl --user enable --now podman-mcp-server.service
+systemctl --user start --no-block ai-shared-network.service
+systemctl --user enable vllm-rocm.service
+systemctl --user enable open-webui.service
+systemctl --user enable podman-mcp-server.service
+systemctl --user start --no-block vllm-rocm.service
+systemctl --user start --no-block open-webui.service
+systemctl --user start --no-block podman-mcp-server.service
 
 echo
 echo "Installed and started services:"
@@ -50,8 +91,13 @@ echo "  - ai-shared-network.service"
 echo "  - vllm-rocm.service"
 echo "  - open-webui.service"
 echo "  - podman-mcp-server.service"
+echo "(started in non-blocking mode; first model/image pull can take a while)"
 echo
 echo "Endpoints:"
 echo "  - Open WebUI:        http://localhost:3000"
 echo "  - vLLM OpenAI API:   http://localhost:8000/v1"
 echo "  - Podman MCP server: http://localhost:8080/mcp"
+echo
+echo "Check progress:"
+echo "  systemctl --user status vllm-rocm.service --no-pager"
+echo "  journalctl --user -u vllm-rocm.service -f"

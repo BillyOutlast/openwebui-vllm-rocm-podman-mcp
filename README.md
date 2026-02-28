@@ -12,6 +12,9 @@ The `quadlets/` directory contains rootless Podman Quadlets with a shared networ
 On the remote Linux host:
 
 ```bash
+chmod +x preflight.sh
+./preflight.sh
+
 chmod +x install.sh uninstall.sh
 ./install.sh
 ```
@@ -43,10 +46,20 @@ Then edit `~/.config/containers/systemd/stack.env` and set `HF_TOKEN`.
 
 ```powershell
 systemctl --user daemon-reload
-systemctl --user start ai-shared-network.service
-systemctl --user enable --now vllm-rocm.service
-systemctl --user enable --now open-webui.service
-systemctl --user enable --now podman-mcp-server.service
+systemctl --user start --no-block ai-shared-network.service
+systemctl --user enable vllm-rocm.service
+systemctl --user enable open-webui.service
+systemctl --user enable podman-mcp-server.service
+systemctl --user start --no-block vllm-rocm.service
+systemctl --user start --no-block open-webui.service
+systemctl --user start --no-block podman-mcp-server.service
+```
+
+First startup can take a long time while images/models are pulled. Monitor with:
+
+```bash
+systemctl --user status vllm-rocm.service --no-pager
+journalctl --user -u vllm-rocm.service -f
 ```
 
 ## 3) Endpoints
@@ -101,6 +114,22 @@ For persistent remote-user services, enable lingering once:
 ```bash
 sudo loginctl enable-linger $USER
 ```
+
+If you see errors like:
+
+`Error: cannot set up namespace using "/usr/bin/newuidmap": exit status 1`
+
+this is a rootless Podman host setup issue (`uidmap` or `/etc/subuid`/`/etc/subgid`).
+Ask an admin to run:
+
+```bash
+sudo apt-get update && sudo apt-get install -y uidmap
+grep "^$USER:" /etc/subuid || echo "$USER:100000:65536" | sudo tee -a /etc/subuid
+grep "^$USER:" /etc/subgid || echo "$USER:100000:65536" | sudo tee -a /etc/subgid
+sudo chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap
+```
+
+Then fully log out and log back in before running `./install.sh` again.
 
 ## Notes
 
