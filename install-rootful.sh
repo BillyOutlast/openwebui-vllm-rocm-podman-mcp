@@ -30,12 +30,13 @@ configure_ollama_dri_devices() {
   fi
 
   for node in "${dri_nodes[@]}"; do
-    replacement+="PodmanArgs=--device=${node}\\n"
+    replacement+="PodmanArgs=--device=${node}"
+    replacement+=$'\n'
   done
 
   awk -v replacement="${replacement}" '
     $0 == "PodmanArgs=--device=/dev/dri" {
-      printf "%b", replacement
+      printf "%s", replacement
       next
     }
     { print }
