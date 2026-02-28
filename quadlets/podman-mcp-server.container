@@ -6,7 +6,6 @@ Wants=network-online.target podman.socket
 [Container]
 ContainerName=podman-mcp-server
 Image=docker.io/library/node:current-alpine
-Pull=always
 Network=ai-shared.network
 PublishPort=8080:8080
 Volume=%t/podman/podman.sock:/run/podman/podman.sock

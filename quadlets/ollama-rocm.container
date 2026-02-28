@@ -6,7 +6,6 @@ Wants=network-online.target
 [Container]
 ContainerName=ollama
 Image=docker.io/ollama/ollama:rocm
-Pull=always
 Network=ai-shared.network
 PublishPort=11434:11434
 Volume=ollama:/root/.ollama:Z
