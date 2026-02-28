@@ -5,7 +5,8 @@ Wants=network-online.target
 
 [Container]
 ContainerName=vllm-rocm
-Image=docker.io/vllm/vllm-openai-rocm:latest
+Image=docker.io/vllm/vllm-openai-rocm:nightly
+Pull=always
 Network=ai-shared.network
 PublishPort=8000:8000
 Volume=%h/.cache/huggingface:/root/.cache/huggingface:Z
@@ -22,7 +23,7 @@ PodmanArgs=--device=/dev/kfd
 PodmanArgs=--device=/dev/dri/renderD128
 PodmanArgs=--device=/dev/dri/renderD129
 PodmanArgs=--ipc=host
-Exec=Qwen/Qwen3.5-35B-A3B-FP8 --trust-remote-code --tensor-parallel 4 -dp 8 --enable-expert-parallel --mm-encoder-tp-mode data --mm-processor-cache-type shm --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice --tool-call-parser qwen3_coder
+Exec=Qwen/Qwen3.5-35B-A3B-FP8 --tensor-parallel 4 -dp 8 --enable-expert-parallel --mm-encoder-tp-mode data --mm-processor-cache-type shm --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice --tool-call-parser qwen3_coder
 
 [Service]
 Restart=always

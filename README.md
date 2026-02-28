@@ -83,8 +83,8 @@ journalctl --user -u vllm-rocm.service -f
 
 `quadlets/vllm-rocm.container` is configured to serve:
 
+- Image: `docker.io/vllm/vllm-openai-rocm:nightly` (with `Pull=always`)
 - Model: `Qwen/Qwen3.5-35B-A3B-FP8`
-- `--trust-remote-code`
 - `--tensor-parallel 4`
 - `-dp 8 --enable-expert-parallel`
 - `--mm-encoder-tp-mode data --mm-processor-cache-type shm`
@@ -187,6 +187,15 @@ sudo mkdir -p /root/.cache/huggingface /root/.cache/miopen
 sudo systemctl reset-failed vllm-rocm.service
 sudo systemctl restart vllm-rocm.service
 sudo journalctl -u vllm-rocm.service -f
+```
+
+To force-refresh the container image manually:
+
+```bash
+sudo podman pull docker.io/vllm/vllm-openai-rocm:nightly
+sudo systemctl daemon-reload
+sudo systemctl reset-failed vllm-rocm.service
+sudo systemctl restart vllm-rocm.service
 ```
 
 ## Notes
