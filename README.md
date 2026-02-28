@@ -160,6 +160,23 @@ If the environment still blocks rootless namespaces, use:
 sudo bash ./install-rootful.sh
 ```
 
+If logs show `Error: no devices found in /dev/dri: invalid argument`, your Podman runtime likely rejects a directory device mapping.
+This stack now maps explicit render devices (`/dev/dri/renderD128` and `/dev/dri/renderD129`) and checks for `/dev/dri/renderD*`.
+The installers now skip starting `vllm-rocm.service` in that case and start the other services.
+
+Verify GPU device nodes:
+
+```bash
+ls -l /dev/kfd
+ls -l /dev/dri
+```
+
+For rootful install, set HF token in:
+
+```bash
+sudoedit /root/.config/containers/systemd/stack.env
+```
+
 ## Notes
 
 - `podman-mcp-server` is launched via `npx` inside a Node container because the upstream project is distributed as binary/npm package.

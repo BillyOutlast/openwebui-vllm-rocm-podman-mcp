@@ -97,14 +97,34 @@ systemctl --user start --no-block ai-shared-network.service
 systemctl --user enable vllm-rocm.service
 systemctl --user enable open-webui.service
 systemctl --user enable podman-mcp-server.service
-systemctl --user start --no-block vllm-rocm.service
+
+VLLM_READY=true
+if [[ ! -e /dev/kfd ]]; then
+  echo "Skipping vllm-rocm.service: /dev/kfd is missing on this host."
+  VLLM_READY=false
+fi
+if ! compgen -G "/dev/dri/renderD*" >/dev/null; then
+  echo "Skipping vllm-rocm.service: no /dev/dri/renderD* nodes found on this host."
+  VLLM_READY=false
+fi
+
+if [[ "${VLLM_READY}" == "true" ]]; then
+  systemctl --user start --no-block vllm-rocm.service
+else
+  echo "vllm-rocm.service not started. Fix GPU device mapping and rerun ./install.sh."
+fi
+
 systemctl --user start --no-block open-webui.service
 systemctl --user start --no-block podman-mcp-server.service
 
 echo
 echo "Installed and started services:"
 echo "  - ai-shared-network.service"
-echo "  - vllm-rocm.service"
+if [[ "${VLLM_READY}" == "true" ]]; then
+  echo "  - vllm-rocm.service"
+else
+  echo "  - vllm-rocm.service (skipped: missing /dev/kfd or /dev/dri)"
+fi
 echo "  - open-webui.service"
 echo "  - podman-mcp-server.service"
 echo "(started in non-blocking mode; first model/image pull can take a while)"
