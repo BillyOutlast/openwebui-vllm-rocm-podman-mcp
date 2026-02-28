@@ -1,7 +1,7 @@
 [Unit]
 Description=Open WebUI
-After=network-online.target vllm-rocm.service
-Wants=network-online.target vllm-rocm.service
+After=network-online.target ollama-rocm.service
+Wants=network-online.target ollama-rocm.service
 
 [Container]
 ContainerName=open-webui
@@ -9,7 +9,7 @@ Image=ghcr.io/open-webui/open-webui:main
 Network=ai-shared.network
 PublishPort=3000:8080
 Volume=%h/.local/share/open-webui:/app/backend/data:Z
-Environment=OPENAI_API_BASE_URL=http://vllm-rocm:8000/v1
+Environment=OLLAMA_BASE_URL=http://ollama:11434
 
 [Service]
 Restart=always

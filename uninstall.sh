@@ -25,7 +25,7 @@ ensure_user_bus
 
 services=(
   ai-shared-network.service
-  vllm-rocm.service
+  ollama-rocm.service
   open-webui.service
   podman-mcp-server.service
 )
@@ -35,7 +35,7 @@ for svc in "${services[@]}"; do
 done
 
 rm -f "${TARGET_DIR}/ai-shared.network"
-rm -f "${TARGET_DIR}/vllm-rocm.container"
+rm -f "${TARGET_DIR}/ollama-rocm.container"
 rm -f "${TARGET_DIR}/open-webui.container"
 rm -f "${TARGET_DIR}/podman-mcp-server.container"
 
@@ -47,5 +47,5 @@ if [[ "${REMOVE_DATA}" == "true" ]]; then
 fi
 
 echo "Uninstalled Quadlet units and stopped services."
-echo "Kept ${TARGET_DIR}/stack.env and Hugging Face cache by default."
+echo "Kept persistent data by default (Open WebUI data and Ollama volume)."
 echo "Set REMOVE_DATA=true to also remove Open WebUI data."

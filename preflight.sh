@@ -26,7 +26,7 @@ check_cmd() {
   fi
 }
 
-echo "Running preflight checks for openwebui-vllm-rocm-podman-mcp"
+echo "Running preflight checks for openwebui-ollama-rocm-podman-mcp"
 echo
 
 check_cmd podman

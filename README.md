@@ -1,9 +1,9 @@
-# Quadlets: vLLM ROCm + Open WebUI + Podman MCP Server
+# Quadlets: Ollama ROCm + Open WebUI + Podman MCP Server
 
 The `quadlets/` directory contains rootless Podman Quadlets with a shared network:
 
 - `ai-shared.network`
-- `vllm-rocm.container`
+- `ollama-rocm.container`
 - `open-webui.container`
 - `podman-mcp-server.container`
 
@@ -48,20 +48,17 @@ REMOVE_DATA=true ./uninstall.sh
 mkdir "$HOME/.config/containers/systemd" -Force
 copy .\quadlets\*.network "$HOME/.config/containers/systemd\"
 copy .\quadlets\*.container "$HOME/.config/containers/systemd\"
-copy .\quadlets\stack.env.example "$HOME/.config/containers/systemd\stack.env"
 ```
-
-Then edit `~/.config/containers/systemd/stack.env` and set `HF_TOKEN`.
 
 ## 2) Reload and start services
 
 ```powershell
 systemctl --user daemon-reload
 systemctl --user start --no-block ai-shared-network.service
-systemctl --user enable vllm-rocm.service
+systemctl --user enable ollama-rocm.service
 systemctl --user enable open-webui.service
 systemctl --user enable podman-mcp-server.service
-systemctl --user start --no-block vllm-rocm.service
+systemctl --user start --no-block ollama-rocm.service
 systemctl --user start --no-block open-webui.service
 systemctl --user start --no-block podman-mcp-server.service
 ```
@@ -69,40 +66,32 @@ systemctl --user start --no-block podman-mcp-server.service
 First startup can take a long time while images/models are pulled. Monitor with:
 
 ```bash
-systemctl --user status vllm-rocm.service --no-pager
-journalctl --user -u vllm-rocm.service -f
+systemctl --user status ollama-rocm.service --no-pager
+journalctl --user -u ollama-rocm.service -f
 ```
 
 ## 3) Endpoints
 
 - Open WebUI: http://localhost:3000
-- vLLM OpenAI API: http://localhost:8000/v1
+- Ollama API: http://localhost:11434
 - Podman MCP HTTP: http://localhost:8080/mcp
 
-## vLLM server profile
+## Ollama server profile
 
-`quadlets/vllm-rocm.container` is configured to serve:
+`quadlets/ollama-rocm.container` is configured equivalent to:
 
-- Image: `docker.io/vllm/vllm-openai-rocm:latest` (with `Pull=always`)
-- Model: `Qwen/Qwen3.5-35B-A3B-FP8`
-- `--tensor-parallel 4`
-- `-dp 8 --enable-expert-parallel`
-- `--mm-encoder-tp-mode data --mm-processor-cache-type shm`
-- `--reasoning-parser qwen3 --enable-prefix-caching`
-- Tool calling enabled: `--enable-auto-tool-choice --tool-call-parser qwen3_coder`
-- ROCm env: `MIOPEN_USER_DB_PATH`, `MIOPEN_FIND_MODE=FAST`, `VLLM_ROCM_USE_AITER=1`, `SAFETENSORS_FAST_GPU=1`
-- Startup sequence upgrades `transformers` in-container (`pip install --upgrade --no-cache-dir transformers`) before `vllm serve`
+- `docker run -d --device /dev/kfd --device /dev/dri -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:rocm`
+- Image: `docker.io/ollama/ollama:rocm` (with `Pull=always`)
+- Devices: `/dev/kfd` and `/dev/dri`
+- Volume: `ollama:/root/.ollama`
+- Port: `11434:11434`
 
-The serve command uses the model as a positional argument (vLLM `--model` flag is deprecated for `vllm serve`).
-
-The unit also persists MIOpen cache at `~/.cache/miopen` and mounts it into the container.
-
-After changing `quadlets/vllm-rocm.container`:
+After changing `quadlets/ollama-rocm.container`:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user restart vllm-rocm.service
-journalctl --user -u vllm-rocm.service -n 100 --no-pager
+systemctl --user restart ollama-rocm.service
+journalctl --user -u ollama-rocm.service -n 100 --no-pager
 ```
 
 ## Troubleshooting: user systemd bus
@@ -164,9 +153,8 @@ If the environment still blocks rootless namespaces, use:
 sudo bash ./install-rootful.sh
 ```
 
-If logs show `Error: no devices found in /dev/dri: invalid argument`, your Podman runtime likely rejects a directory device mapping.
-This stack now maps explicit render devices (`/dev/dri/renderD128` and `/dev/dri/renderD129`) and checks for `/dev/dri/renderD*`.
-The installers now skip starting `vllm-rocm.service` in that case and start the other services.
+If logs show device mapping errors for `/dev/dri`, verify your runtime and GPU device nodes.
+The installers skip starting `ollama-rocm.service` when `/dev/kfd` or `/dev/dri` is missing.
 
 Verify GPU device nodes:
 
@@ -175,32 +163,17 @@ ls -l /dev/kfd
 ls -l /dev/dri
 ```
 
-For rootful install, set HF token in:
+To force-refresh the Ollama image manually:
 
 ```bash
-sudoedit /root/.config/containers/systemd/stack.env
-```
-
-If logs show `statfs ... no such file or directory` for cache mounts, create them and reset restart backoff:
-
-```bash
-sudo mkdir -p /root/.cache/huggingface /root/.cache/miopen
-sudo systemctl reset-failed vllm-rocm.service
-sudo systemctl restart vllm-rocm.service
-sudo journalctl -u vllm-rocm.service -f
-```
-
-To force-refresh the container image manually:
-
-```bash
-sudo podman pull docker.io/vllm/vllm-openai-rocm:latest
+sudo podman pull docker.io/ollama/ollama:rocm
 sudo systemctl daemon-reload
-sudo systemctl reset-failed vllm-rocm.service
-sudo systemctl restart vllm-rocm.service
+sudo systemctl reset-failed ollama-rocm.service
+sudo systemctl restart ollama-rocm.service
 ```
 
 ## Notes
 
 - `podman-mcp-server` is launched via `npx` inside a Node container because the upstream project is distributed as binary/npm package.
-- The vLLM unit includes the ROCm flags from your `docker run` example.
-- If this host is not Linux with ROCm devices (`/dev/kfd`, `/dev/dri`), `vllm-rocm` will fail to start.
+- The Ollama unit mirrors your ROCm `docker run` flags.
+- If this host is not Linux with ROCm devices (`/dev/kfd`, `/dev/dri`), `ollama` will fail to start.

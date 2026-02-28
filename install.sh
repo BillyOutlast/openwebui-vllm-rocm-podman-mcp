@@ -4,7 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 QUADLETS_DIR="${SCRIPT_DIR}/quadlets"
 TARGET_DIR="${HOME}/.config/containers/systemd"
-STACK_ENV="${TARGET_DIR}/stack.env"
 
 ensure_user_bus() {
   if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
@@ -83,37 +82,30 @@ preflight_rootless_podman() {
 preflight_rootless_podman
 
 mkdir -p "${TARGET_DIR}"
-mkdir -p "${HOME}/.cache/huggingface"
-mkdir -p "${HOME}/.cache/miopen"
 
 cp "${QUADLETS_DIR}"/*.network "${TARGET_DIR}/"
 cp "${QUADLETS_DIR}"/*.container "${TARGET_DIR}/"
 
-if [[ ! -f "${STACK_ENV}" ]]; then
-  cp "${QUADLETS_DIR}/stack.env.example" "${STACK_ENV}"
-  echo "Created ${STACK_ENV}. Set HF_TOKEN before first start."
-fi
-
 systemctl --user daemon-reload
 systemctl --user start --no-block ai-shared-network.service
-systemctl --user enable vllm-rocm.service
+systemctl --user enable ollama-rocm.service
 systemctl --user enable open-webui.service
 systemctl --user enable podman-mcp-server.service
 
-VLLM_READY=true
+OLLAMA_READY=true
 if [[ ! -e /dev/kfd ]]; then
-  echo "Skipping vllm-rocm.service: /dev/kfd is missing on this host."
-  VLLM_READY=false
+  echo "Skipping ollama-rocm.service: /dev/kfd is missing on this host."
+  OLLAMA_READY=false
 fi
-if ! compgen -G "/dev/dri/renderD*" >/dev/null; then
-  echo "Skipping vllm-rocm.service: no /dev/dri/renderD* nodes found on this host."
-  VLLM_READY=false
+if [[ ! -d /dev/dri ]]; then
+  echo "Skipping ollama-rocm.service: /dev/dri is missing on this host."
+  OLLAMA_READY=false
 fi
 
-if [[ "${VLLM_READY}" == "true" ]]; then
-  systemctl --user start --no-block vllm-rocm.service
+if [[ "${OLLAMA_READY}" == "true" ]]; then
+  systemctl --user start --no-block ollama-rocm.service
 else
-  echo "vllm-rocm.service not started. Fix GPU device mapping and rerun ./install.sh."
+  echo "ollama-rocm.service not started. Fix GPU device mapping and rerun ./install.sh."
 fi
 
 systemctl --user start --no-block open-webui.service
@@ -122,10 +114,10 @@ systemctl --user start --no-block podman-mcp-server.service
 echo
 echo "Installed and started services:"
 echo "  - ai-shared-network.service"
-if [[ "${VLLM_READY}" == "true" ]]; then
-  echo "  - vllm-rocm.service"
+if [[ "${OLLAMA_READY}" == "true" ]]; then
+  echo "  - ollama-rocm.service"
 else
-  echo "  - vllm-rocm.service (skipped: missing /dev/kfd or /dev/dri)"
+  echo "  - ollama-rocm.service (skipped: missing /dev/kfd or /dev/dri)"
 fi
 echo "  - open-webui.service"
 echo "  - podman-mcp-server.service"
@@ -133,9 +125,9 @@ echo "(started in non-blocking mode; first model/image pull can take a while)"
 echo
 echo "Endpoints:"
 echo "  - Open WebUI:        http://localhost:3000"
-echo "  - vLLM OpenAI API:   http://localhost:8000/v1"
+echo "  - Ollama API:        http://localhost:11434"
 echo "  - Podman MCP server: http://localhost:8080/mcp"
 echo
 echo "Check progress:"
-echo "  systemctl --user status vllm-rocm.service --no-pager"
-echo "  journalctl --user -u vllm-rocm.service -f"
+echo "  systemctl --user status ollama-rocm.service --no-pager"
+echo "  journalctl --user -u ollama-rocm.service -f"
