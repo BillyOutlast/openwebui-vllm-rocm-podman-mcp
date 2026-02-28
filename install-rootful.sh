@@ -11,10 +11,48 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 QUADLETS_DIR="${SCRIPT_DIR}/quadlets"
 TARGET_DIR="/etc/containers/systemd"
 
+configure_ollama_dri_devices() {
+  local ollama_quadlet="${TARGET_DIR}/ollama-rocm.container"
+  local -a dri_nodes
+  local replacement=""
+  local node
+
+  if [[ ! -f "${ollama_quadlet}" ]]; then
+    return
+  fi
+
+  shopt -s nullglob
+  dri_nodes=(/dev/dri/renderD* /dev/dri/card*)
+  shopt -u nullglob
+
+  if (( ${#dri_nodes[@]} == 0 )); then
+    return
+  fi
+
+  for node in "${dri_nodes[@]}"; do
+    replacement+="PodmanArgs=--device=${node}\\n"
+  done
+
+  awk -v replacement="${replacement}" '
+    $0 == "PodmanArgs=--device=/dev/dri" {
+      printf "%b", replacement
+      next
+    }
+    { print }
+  ' "${ollama_quadlet}" > "${ollama_quadlet}.tmp"
+
+  mv "${ollama_quadlet}.tmp" "${ollama_quadlet}"
+  echo "Configured ollama-rocm.container with explicit /dev/dri nodes:"
+  for node in "${dri_nodes[@]}"; do
+    echo "  - ${node}"
+  done
+}
+
 mkdir -p "${TARGET_DIR}"
 
 cp "${QUADLETS_DIR}"/*.network "${TARGET_DIR}/"
 cp "${QUADLETS_DIR}"/*.container "${TARGET_DIR}/"
+configure_ollama_dri_devices
 
 systemctl daemon-reload
 

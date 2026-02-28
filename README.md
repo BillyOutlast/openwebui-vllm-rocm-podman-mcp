@@ -202,3 +202,4 @@ sudo systemctl restart ollama-rocm.service
 - `podman-mcp-server` is launched via `npx` inside a Node container because the upstream project is distributed as binary/npm package.
 - The Ollama unit mirrors your ROCm `docker run` flags.
 - If this host is not Linux with ROCm devices (`/dev/kfd`, `/dev/dri/renderD*`), `ollama` will fail to start.
+- Installers automatically replace the generic `/dev/dri` mapping with explicit detected nodes (for example `/dev/dri/renderD128`) to avoid Podman hosts that reject directory device mappings.
