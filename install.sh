@@ -72,6 +72,9 @@ preflight_rootless_podman() {
     echo "  echo 'kernel.unprivileged_userns_clone=1' | sudo tee -a /etc/sysctl.d/99-rootless.conf"
     echo "  sudo sysctl --system"
     echo
+    echo "If this still fails in your environment (e.g., restricted container host), use rootful install instead:"
+    echo "  sudo bash ./install-rootful.sh"
+    echo
     echo "Then fully log out and log back in, and rerun ./install.sh"
     exit 1
   fi

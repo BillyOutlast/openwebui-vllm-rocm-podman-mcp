@@ -19,6 +19,14 @@ chmod +x install.sh uninstall.sh
 ./install.sh
 ```
 
+If rootless setup keeps failing with `newuidmap/newgidmap` errors despite correct settings,
+use the rootful fallback:
+
+```bash
+chmod +x install-rootful.sh
+sudo bash ./install-rootful.sh
+```
+
 To remove the stack:
 
 ```bash
@@ -142,6 +150,12 @@ sudo sysctl --system
 ```
 
 Then fully log out and log back in before running `./install.sh` again.
+
+If the environment still blocks rootless namespaces, use:
+
+```bash
+sudo bash ./install-rootful.sh
+```
 
 ## Notes
 
